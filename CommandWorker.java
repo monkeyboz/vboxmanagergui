@@ -30,6 +30,8 @@ public class CommandWorker extends SwingWorker<String,Void>{
     private final VBox parent;
     private Boolean showDirectlyAfter;
     private Boolean commandList;
+    private Boolean isoInstall;
+    private String commandText;
     
     /**
      *
@@ -40,7 +42,7 @@ public class CommandWorker extends SwingWorker<String,Void>{
      * @param showOutput
      * @param function
      */
-    public CommandWorker(VBox parent,JLabel jlabel2,JLayeredPane jLayeredPane1,String[] command,Boolean showOutput,String function){
+    public CommandWorker(VBox parent,JLabel jlabel2,JLayeredPane jLayeredPane1,String[] command,Boolean showOutput,String function,String commandText){
         this.jLabel2 = jlabel2;
         this.jLayeredPane1 = jLayeredPane1;
         this.command = command;
@@ -48,6 +50,8 @@ public class CommandWorker extends SwingWorker<String,Void>{
         this.function = function;
         this.parent = parent;
         this.showDirectlyAfter = true;
+        this.commandText = commandText;
+        jLabel2.setText(commandText);
     }
     
     public CommandWorker(VBox parent){
@@ -87,37 +91,44 @@ public class CommandWorker extends SwingWorker<String,Void>{
     private void changeLoadingText(String function){
         switch(function){
             case "setupIPTable":
-                jLabel2.setText("Setting Up IP Tables...");
+                jLabel2.setText("Updating IP Tables ...");
                 break;
             case "updateIPInformation":
-                jLabel2.setText("Refreshing IP Information For Adapters...");
+                jLabel2.setText("Refreshing IP Information For Adapters ...");
                 break;
             case "createVM":
-                jLabel2.setText("Creating Virtual Machine...");
+                jLabel2.setText("Creating Virtual Machine ...");
                 try{
-                    parent.downloadFile("http://dlc-cdn.sun.com/virtualbox/5.0.0_BETA3/VBoxGuestAdditions_5.0.0_BETA3.iso","VBoxGuestAdditions 5.0.0 BETA3.iso");
+                    if(!isoInstall){
+                        parent.downloadFile("http://dlc-cdn.sun.com/virtualbox/5.0.0_BETA3/VBoxGuestAdditions_5.0.0_BETA3.iso","VBoxGuestAdditions 5.0.0 BETA3.iso");
+                    }
                 } catch(IOException ex){
-                    System.out.println("testing");
+                    System.out.println("error with download ...");
                 }
                 break;
             case "addServerInfoToServerList":
-                jLabel2.setText("Adding Server Info for List");
+                jLabel2.setText("Adding Server Information to Server List ...");
                 break;
             case "startVM":
-                jLabel2.setText("Starting VM...");
+                jLabel2.setText("Starting VM ...");
+                break;
+            case "ipIPTable":
+                jLabel2.setText("Creating new hostonly adapter ...");
                 break;
             default:
-                jLabel2.setText(function);
+                if(commandText == ""){
+                    jLabel2.setText(function);
+                } else {
+                    jLabel2.setText(commandText);
+                }
                 break;
         }
     }
     
     @Override
     public String doInBackground(){
-        jLabel2.setVisible(true);
-        jLayeredPane1.setVisible(false);
         String l = null;
-        
+        isoInstall = (parent.getISOFile()!=null)?true:false;
         changeLoadingText(function);
         try{
             Process run = Runtime.getRuntime().exec(command);
@@ -130,20 +141,16 @@ public class CommandWorker extends SwingWorker<String,Void>{
             }
             parent.setCommandOutput(commandOutput);
             
-            try{
-                parent.getClass().getMethod(function).invoke(parent);
-            } catch(NoSuchMethodException | SecurityException ex){
-                changeLoadingText("Error With Function Call");
-            } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-                Logger.getLogger(CommandWorker.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            
             if(showOutput){
                 for(int i = 0; i < command.length; ++i){
                     System.out.print(command[i]+" ");
                 }
                 System.out.println();
                 
+                if("createvm".equals(command[1])){
+                    String o = commandOutput.get(commandOutput.size()-1).replace("Settings file: '","").replace("\'","").trim();
+                    parent.setVirtualboxdir(o.substring(0,o.lastIndexOf("\\")).trim());
+                }
                 for(int i = 0; i < commandOutput.size(); ++i){
                     System.out.println(commandOutput.get(i));
                 }
@@ -156,9 +163,12 @@ public class CommandWorker extends SwingWorker<String,Void>{
 
     @Override
     public void done() {
-        if(this.showDirectlyAfter){
-            jLayeredPane1.setVisible(true);
-            jLabel2.setVisible(false);
+        try{
+            parent.getClass().getMethod(function).invoke(parent);
+        } catch(NoSuchMethodException | SecurityException ex){
+            changeLoadingText("Error With Function Call");
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+            Logger.getLogger(CommandWorker.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }

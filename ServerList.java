@@ -6,6 +6,7 @@
 package information;
 
 import java.util.ArrayList;
+import javax.swing.ImageIcon;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
@@ -17,6 +18,7 @@ import javax.swing.tree.TreeModel;
 public final class ServerList extends javax.swing.JFrame {
     VBox parent;
     TreeModel ServerList;
+    int[] mouseOrigin;
     
     /**
      * Creates new form ServerList
@@ -24,6 +26,17 @@ public final class ServerList extends javax.swing.JFrame {
     public ServerList() {
         initComponents();
         setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
+        this.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                formMousePressed(evt);
+            }
+        });
+        this.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            public void mouseDragged(java.awt.event.MouseEvent evt) {
+                formMouseDragged(evt);
+            }
+        });
+        jLabel6.setIcon(new ImageIcon(getClass().getResource("/information/images/close_button.png")));
     }
     
     public void setupParent(VBox parent){
@@ -35,8 +48,8 @@ public final class ServerList extends javax.swing.JFrame {
         parent.setupVBoxDir();
         ArrayList<String> serversHolder = parent.getServers();
         for(int i = 0; i < serversHolder.size(); ++i){
-            DefaultMutableTreeNode currServer = new DefaultMutableTreeNode(parent.getServerList(i));
-            String[] tmpServer = serversHolder.get(i).split(",");
+            DefaultMutableTreeNode currServer = new DefaultMutableTreeNode(serversHolder.get(i));
+            String[] tmpServer = parent.getVMList(i).split(",");
             for(int j = 0; j < tmpServer.length; ++j){
                 if(tmpServer[j] != "null"){
                     DefaultMutableTreeNode serverInfo = new DefaultMutableTreeNode(tmpServer[j]);
@@ -49,6 +62,7 @@ public final class ServerList extends javax.swing.JFrame {
         jTree1.setModel(model);
         
         jTree1.setCellRenderer(new CellRenderer());
+        this.setVisible(true);
     }
     
     public void setParent(VBox parent){
@@ -68,14 +82,18 @@ public final class ServerList extends javax.swing.JFrame {
         jLabel1 = new javax.swing.JLabel();
         jScrollPane2 = new javax.swing.JScrollPane();
         jTree1 = new javax.swing.JTree();
+        jLabel6 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setUndecorated(true);
+        setResizable(false);
 
         jLayeredPane1.setBackground(new java.awt.Color(51, 51, 51));
+        jLayeredPane1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
         jLayeredPane1.setOpaque(true);
 
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel1.setText("Servers");
+        jLabel1.setText("Server List");
 
         jTree1.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
         jTree1.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -85,8 +103,18 @@ public final class ServerList extends javax.swing.JFrame {
         });
         jScrollPane2.setViewportView(jTree1);
 
+        jLabel6.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel6.setText("close");
+        jLabel6.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        jLabel6.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                jLabel6MouseClicked(evt);
+            }
+        });
+
         jLayeredPane1.setLayer(jLabel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
         jLayeredPane1.setLayer(jScrollPane2, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane1.setLayer(jLabel6, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         javax.swing.GroupLayout jLayeredPane1Layout = new javax.swing.GroupLayout(jLayeredPane1);
         jLayeredPane1.setLayout(jLayeredPane1Layout);
@@ -97,17 +125,20 @@ public final class ServerList extends javax.swing.JFrame {
                 .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jLayeredPane1Layout.createSequentialGroup()
                         .addComponent(jLabel1)
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 601, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jLabel6))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 616, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jLayeredPane1Layout.setVerticalGroup(
             jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jLayeredPane1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel1)
+                .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(jLabel6))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 377, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 371, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -115,28 +146,44 @@ public final class ServerList extends javax.swing.JFrame {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jLayeredPane1, javax.swing.GroupLayout.Alignment.TRAILING)
+            .addComponent(jLayeredPane1)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jLayeredPane1)
+            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
     private void jTree1MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTree1MouseClicked
-        String[] info = jTree1.getSelectionPaths()[0].toString().replace("[","").replace("]","").split(",");
-        String osInfo = info[info.length-1].substring(1).replace("\"","").trim();
-        String[] extract = osInfo.split(" ");
-        String commandString = "";
-        for(int i = 0; i < extract.length-1; ++i){
-            commandString += extract[i]+" ";
+        if(jTree1.getSelectionPaths() != null){
+            String[] info = jTree1.getSelectionPaths()[0].toString().replace("[","").replace("]","").split(",");
+            String osInfo = info[info.length-1].substring(1).replace("\"","").trim();
+            String[] extract = osInfo.split(" ");
+            String commandString = "";
+            if(extract.length > 1){
+                for(int i = 0; i < extract.length-1; ++i){
+                    commandString += extract[i]+" ";
+                }
+                String[] testing = new String[]{parent.getVBDir(),"startvm","\""+commandString.substring(0,commandString.length()-1)+"\""};
+                parent.runCommand(testing,true,"startVM",true,"Starting VM");
+            }
         }
-        String[] testing = new String[]{parent.getVBDir(),"startvm","\""+commandString.substring(0,commandString.length()-1)+"\""};
-        parent.runCommand(testing,true,"startVM",true);
     }//GEN-LAST:event_jTree1MouseClicked
 
+    private void jLabel6MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel6MouseClicked
+        this.setVisible(false);
+    }//GEN-LAST:event_jLabel6MouseClicked
+
+    private void formMouseDragged(java.awt.event.MouseEvent evt) {                                  
+        this.setBounds(evt.getX()+this.getX()-mouseOrigin[0],evt.getY()+this.getY()-mouseOrigin[1],this.getWidth(),this.getHeight());
+    }                                 
+
+    private void formMousePressed(java.awt.event.MouseEvent evt) {                                  
+        mouseOrigin = new int[]{evt.getX(),evt.getY()};
+    }
+    
     /**
      * @param args the command line arguments
      */
@@ -174,6 +221,7 @@ public final class ServerList extends javax.swing.JFrame {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel6;
     private javax.swing.JLayeredPane jLayeredPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JTree jTree1;

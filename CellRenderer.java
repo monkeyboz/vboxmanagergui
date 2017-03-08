@@ -31,12 +31,12 @@ public class CellRenderer implements TreeCellRenderer{
         String treeText = value.toString().trim().replace("\"","");
         ImageIcon baseIcon = null;
         
-        if (treeText.toLowerCase().contains("centos")) {
-            baseIcon = new ImageIcon(getClass().getResource("centos.png"));
+        if (treeText.toLowerCase().contains("centos") || treeText.toLowerCase().contains("fedora")) {
+            baseIcon = new ImageIcon(getClass().getResource("/information/images/centos.png"));
         } else if(treeText.toLowerCase().contains("ubuntu")) {
-            baseIcon = new ImageIcon(getClass().getResource("ubuntu.png"));
+            baseIcon = new ImageIcon(getClass().getResource("/information/images/ubuntu.png"));
         } else if(treeText.toLowerCase().contains("windows")) {
-            baseIcon = new ImageIcon(getClass().getResource("windows.png"));
+            baseIcon = new ImageIcon(getClass().getResource("/information/images/windows.png"));
         } else {
             baseIcon = null;
         }

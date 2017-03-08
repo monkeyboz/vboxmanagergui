@@ -1,0 +1,5 @@
+ubuntu,http://svwh.dl.sourceforge.net/project/virtualboximage/Ubuntu%20Linux/12.10/ubuntu-12.10-desktop-i386.7z
+redhat,http://svwh.dl.sourceforge.net/project/virtualboximage/Fedora/17/Fedora-17-x86.7z
+fedora,http://svwh.dl.sourceforge.net/project/virtualboximage/Fedora/17/Fedora-17-x86.7z
+centos,http://svwh.dl.sourceforge.net/project/virtualboximage/CentOS/6.3/CentOS-6.3-x86.7z
+freebsd,http://svwh.dl.sourceforge.net/project/virtualboximage/FreeBSD/FreeBSD%207.1%20%2B%20xfce4/FreeBSD-7.1-i386-xfce4.7z
