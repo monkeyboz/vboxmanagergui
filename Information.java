@@ -9,7 +9,6 @@ public class Information {
     public static void main(String[] args) {
         VBox vbox = new VBox();
         vbox.setVisible(true);
-        vbox.setVBoxDir("C:\\Program Files\\Oracle\\VirtualBox\\");
         vbox.setupIPTable();
     }
 }

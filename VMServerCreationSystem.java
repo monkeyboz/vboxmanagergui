@@ -5,6 +5,8 @@
  */
 package information;
 
+import java.awt.Image;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,6 +28,7 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
     private String serverType;
     private int[] mouseOrigin;
     private int ramAmount;
+    private int HDSize;
     /**
      * Creates new form VMServerCreationSystem
      */
@@ -33,50 +36,80 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
         initComponents();
         setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
         jLabel5.setIcon(new ImageIcon(getClass().getResource("/information/images/close_button.png")));
-        jSlider1.setMinimum(4);
-        jSlider1.setMaximum(getRam());
+        String[] driveSizes = getRam().split(",");
+        VMRamSlider.setMinimum(4);
+        VMRamSlider.setMaximum(Integer.parseInt(driveSizes[0]));
+        
+        jLabel8.setVisible(false);
+        
+        ServerHDSlider.setMinimum(200);
+        ServerHDSlider.setMaximum(Integer.parseInt(driveSizes[1]));
         
         jProgressBar1.setMinimum(0);
         jProgressBar1.setMaximum(100);
         jProgressBar1.setValue(75);
         ramAmount = 300;
+        HDSize = 25;
         
-        jSlider1.addChangeListener(new ChangeListener(){
+        Toolkit kit = Toolkit.getDefaultToolkit();
+        Image img = kit.createImage(getClass().getResource("/information/images/vmicon.png").getFile());
+        this.setIconImage(img);
+        
+        ServerHDSlider.addChangeListener(new ChangeListener(){
             @Override
-            public void stateChanged(ChangeEvent e) {
-                ramAmount = jSlider1.getValue();
+            public void stateChanged(ChangeEvent e){
+                HDSize = ServerHDSlider.getValue();
                 DecimalFormat digit = new DecimalFormat("###,###.##");
-                jLabel6.setText("VM Ram ("+digit.format((double)ramAmount)+" MB)");
+                jLabel1.setText("Server HD Size "+digit.format(HDSize)+" MB");
             }
         });
+        
+        VMRamSlider.addChangeListener(new ChangeListener(){
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                ramAmount = VMRamSlider.getValue();
+                DecimalFormat digit = new DecimalFormat("###,###.##");
+                jLabel6.setText("VM Ram ("+digit.format((double)ramAmount)+" MB)");
+                if(ramAmount > (Integer.parseInt(driveSizes[1])/2)){
+                    tooHighVMRam.setVisible(true);
+                } else {
+                    tooHighVMRam.setVisible(false);
+                }
+            }
+        });
+        this.setBounds(0,0,jLayeredPane1.getWidth(),jLayeredPane1.getHeight()+1);
     }
     
     public void setParent(VBox parent){
         this.parent = parent;
+        setupFrame();
     }
     
     public void setServerType(String serverConfigType){
         serverType = serverConfigType;
     }
     
-    private int getRam(){
+    private String getRam(){
+        String totals = "";
         try{
             Process run = Runtime.getRuntime().exec("systeminfo");
             InputStreamReader v = new InputStreamReader(run.getInputStream());
-                BufferedReader m = new BufferedReader(v);
+            BufferedReader m = new BufferedReader(v);
 
             String l;
             ArrayList<String> commandOutput = new ArrayList<>();
-            String totalRam = "";
             while((l = m.readLine()) != null){
                 if(l.contains("Total Physical Memory:     ")){
-                    return Integer.parseInt(l.replace("Total Physical Memory:     ","").replace(",","").replace(" MB",""));
+                    totals += Integer.parseInt(l.replace("Total Physical Memory:     ","").replace(",","").replace(" MB",""));
+                }
+                if(l.contains("Virtual Memory: Max Size:")){
+                    totals += ","+l.replace("Virtual Memory: Max Size:  ","").replace(",","").replace(" MB","");
                 }
             }
         } catch(IOException ex){
             System.out.println(ex);
         }
-        return 0;
+        return totals;
     }
     
     public void setupFrame() {
@@ -106,7 +139,7 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
                 }
             }
         } catch(IOException ex){
-            System.out.println("testing");
+            System.out.println(ex);
         }
     }
 
@@ -121,7 +154,6 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
 
         jLayeredPane1 = new javax.swing.JLayeredPane();
         jLabel1 = new javax.swing.JLabel();
-        jTextField1 = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
         jComboBox1 = new javax.swing.JComboBox<>();
         jButton1 = new javax.swing.JButton();
@@ -132,11 +164,17 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
         jButton2 = new javax.swing.JButton();
         jLabel5 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
-        jSlider1 = new javax.swing.JSlider();
+        VMRamSlider = new javax.swing.JSlider();
         jProgressBar1 = new javax.swing.JProgressBar();
+        ServerHDSlider = new javax.swing.JSlider();
+        jLabel8 = new javax.swing.JLabel();
+        tooHighVMRam = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setMaximumSize(new java.awt.Dimension(613, 330));
+        setMinimumSize(new java.awt.Dimension(613, 330));
         setUndecorated(true);
+        setPreferredSize(new java.awt.Dimension(613, 330));
         setResizable(false);
         addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
             public void mouseDragged(java.awt.event.MouseEvent evt) {
@@ -154,18 +192,13 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
 
         jLayeredPane1.setBackground(new java.awt.Color(51, 51, 51));
         jLayeredPane1.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 255, 255)));
+        jLayeredPane1.setForeground(new java.awt.Color(255, 255, 255));
+        jLayeredPane1.setMaximumSize(new java.awt.Dimension(613, 320));
+        jLayeredPane1.setMinimumSize(new java.awt.Dimension(613, 320));
         jLayeredPane1.setOpaque(true);
 
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
         jLabel1.setText("Server HD Size");
-
-        jTextField1.setText("32768");
-        jTextField1.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
-        jTextField1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jTextField1ActionPerformed(evt);
-            }
-        });
 
         jLabel2.setForeground(new java.awt.Color(255, 255, 255));
         jLabel2.setText("OS Type");
@@ -227,15 +260,28 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
         jLabel6.setForeground(new java.awt.Color(255, 255, 255));
         jLabel6.setText("VM Ram");
 
-        jSlider1.setBackground(new java.awt.Color(51, 51, 51));
+        VMRamSlider.setBackground(new java.awt.Color(51, 51, 51));
+        VMRamSlider.setPaintLabels(true);
+        VMRamSlider.setPaintTicks(true);
+        VMRamSlider.setSnapToTicks(true);
 
         jProgressBar1.setBackground(new java.awt.Color(255, 102, 102));
         jProgressBar1.setForeground(new java.awt.Color(153, 255, 153));
         jProgressBar1.setBorderPainted(false);
         jProgressBar1.setOpaque(true);
 
+        ServerHDSlider.setBackground(new java.awt.Color(51, 51, 51));
+        ServerHDSlider.setPaintLabels(true);
+        ServerHDSlider.setPaintTicks(true);
+        ServerHDSlider.setSnapToTicks(true);
+
+        jLabel8.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel8.setText(" ");
+
+        tooHighVMRam.setForeground(new java.awt.Color(255, 255, 255));
+        tooHighVMRam.setText(" ");
+
         jLayeredPane1.setLayer(jLabel1, javax.swing.JLayeredPane.DEFAULT_LAYER);
-        jLayeredPane1.setLayer(jTextField1, javax.swing.JLayeredPane.DEFAULT_LAYER);
         jLayeredPane1.setLayer(jLabel2, javax.swing.JLayeredPane.DEFAULT_LAYER);
         jLayeredPane1.setLayer(jComboBox1, javax.swing.JLayeredPane.DEFAULT_LAYER);
         jLayeredPane1.setLayer(jButton1, javax.swing.JLayeredPane.DEFAULT_LAYER);
@@ -246,8 +292,11 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
         jLayeredPane1.setLayer(jButton2, javax.swing.JLayeredPane.DEFAULT_LAYER);
         jLayeredPane1.setLayer(jLabel5, javax.swing.JLayeredPane.DEFAULT_LAYER);
         jLayeredPane1.setLayer(jLabel6, javax.swing.JLayeredPane.DEFAULT_LAYER);
-        jLayeredPane1.setLayer(jSlider1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane1.setLayer(VMRamSlider, javax.swing.JLayeredPane.DEFAULT_LAYER);
         jLayeredPane1.setLayer(jProgressBar1, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane1.setLayer(ServerHDSlider, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane1.setLayer(jLabel8, javax.swing.JLayeredPane.DEFAULT_LAYER);
+        jLayeredPane1.setLayer(tooHighVMRam, javax.swing.JLayeredPane.DEFAULT_LAYER);
 
         javax.swing.GroupLayout jLayeredPane1Layout = new javax.swing.GroupLayout(jLayeredPane1);
         jLayeredPane1.setLayout(jLayeredPane1Layout);
@@ -256,31 +305,38 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
             .addGroup(jLayeredPane1Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jTextField2)
+                    .addComponent(jProgressBar1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(VMRamSlider, javax.swing.GroupLayout.DEFAULT_SIZE, 591, Short.MAX_VALUE)
                     .addComponent(jComboBox1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jLayeredPane1Layout.createSequentialGroup()
+                        .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel2)
+                            .addComponent(jLabel4))
+                        .addGap(0, 0, Short.MAX_VALUE))
                     .addGroup(jLayeredPane1Layout.createSequentialGroup()
                         .addComponent(jLabel3)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(jLabel5))
-                    .addComponent(jTextField1)
+                    .addGroup(jLayeredPane1Layout.createSequentialGroup()
+                        .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(jLayeredPane1Layout.createSequentialGroup()
+                                .addComponent(jLabel1)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(jLabel8))
+                            .addGroup(jLayeredPane1Layout.createSequentialGroup()
+                                .addComponent(jLabel6)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(tooHighVMRam)))
+                        .addGap(21, 21, 21))
+                    .addComponent(ServerHDSlider, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jLayeredPane1Layout.createSequentialGroup()
                         .addComponent(jTextField3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jButton2))
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jLayeredPane1Layout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
-                        .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jButton1, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addComponent(jLabel4)
-                                .addComponent(jLabel1)
-                                .addComponent(jLabel2)
-                                .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, 400, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addComponent(jLabel6)
-                                .addGroup(jLayeredPane1Layout.createSequentialGroup()
-                                    .addGap(40, 40, 40)
-                                    .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(jSlider1, javax.swing.GroupLayout.DEFAULT_SIZE, 309, Short.MAX_VALUE)
-                                        .addComponent(jProgressBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))))))
+                        .addComponent(jButton1)))
                 .addContainerGap())
         );
         jLayeredPane1Layout.setVerticalGroup(
@@ -293,44 +349,43 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jTextField2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel1)
+                .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(jLabel8))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(ServerHDSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 18, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(4, 4, 4)
                 .addComponent(jLabel4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jTextField3))
-                .addGap(18, 18, 18)
-                .addComponent(jLabel6)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jSlider1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jButton2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 21, Short.MAX_VALUE)
+                .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel6)
+                    .addComponent(tooHighVMRam))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(VMRamSlider, javax.swing.GroupLayout.PREFERRED_SIZE, 19, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jProgressBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 5, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(27, 27, 27)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jButton1)
-                .addContainerGap())
+                .addGap(34, 34, 34))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                .addGap(0, 0, Short.MAX_VALUE)
-                .addComponent(jLayeredPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, 0))
+            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addComponent(jLayeredPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
+            .addComponent(jLayeredPane1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         pack();
@@ -343,17 +398,14 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
         String vboxdir = parent.getVBoxDir();
         
-        String hdSize = jTextField1.getText();
+        String hdSize = String.valueOf(ServerHDSlider.getValue());
         if(hdSize == "") hdSize = "32768";
         
         parent.setISO(jTextField3.getText());
-        parent.getNewVMInformation(jTextField2.getText(),jTextField1.getText(),jComboBox1.getSelectedItem().toString(),Integer.toString(jSlider1.getValue()));
+        parent.getNewVMInformation(jTextField2.getText(),hdSize,jComboBox1.getSelectedItem().toString(),Integer.toString(VMRamSlider.getValue()));
         parent.createVM();
+        this.setVisible(false);
     }//GEN-LAST:event_jButton1ActionPerformed
-
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jTextField1ActionPerformed
 
     private void jTextField2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField2ActionPerformed
         // TODO add your handling code here:
@@ -435,6 +487,8 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JSlider ServerHDSlider;
+    private javax.swing.JSlider VMRamSlider;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JComboBox<String> jComboBox1;
@@ -444,11 +498,11 @@ public class VMServerCreationSystem extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JLayeredPane jLayeredPane1;
     private javax.swing.JProgressBar jProgressBar1;
-    private javax.swing.JSlider jSlider1;
-    private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField2;
     private javax.swing.JTextField jTextField3;
+    private javax.swing.JLabel tooHighVMRam;
     // End of variables declaration//GEN-END:variables
 }

@@ -15,7 +15,7 @@ import javax.swing.tree.TreeModel;
  *
  * @author monkeyboz
  */
-public final class ServerList extends javax.swing.JFrame {
+public class ServerList extends javax.swing.JFrame {
     VBox parent;
     TreeModel ServerList;
     int[] mouseOrigin;
@@ -25,7 +25,7 @@ public final class ServerList extends javax.swing.JFrame {
      */
     public ServerList() {
         initComponents();
-        setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
+        //setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
         this.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mousePressed(java.awt.event.MouseEvent evt) {
                 formMousePressed(evt);
@@ -94,6 +94,8 @@ public final class ServerList extends javax.swing.JFrame {
 
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
         jLabel1.setText("Server List");
+
+        jScrollPane2.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
         jTree1.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
         jTree1.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -166,7 +168,9 @@ public final class ServerList extends javax.swing.JFrame {
                 for(int i = 0; i < extract.length-1; ++i){
                     commandString += extract[i]+" ";
                 }
-                String[] testing = new String[]{parent.getVBDir(),"startvm","\""+commandString.substring(0,commandString.length()-1)+"\""};
+                String startedVM = commandString.substring(0,commandString.length()-1);
+                String[] testing = new String[]{parent.getVBDir(),"startvm","\""+startedVM+"\""};
+                parent.setStartedVM(startedVM);
                 parent.runCommand(testing,true,"startVM",true,"Starting VM");
             }
         }

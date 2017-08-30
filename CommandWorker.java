@@ -11,8 +11,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.SwingWorker;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
@@ -32,6 +30,7 @@ public class CommandWorker extends SwingWorker<String,Void>{
     private Boolean commandList;
     private Boolean isoInstall;
     private String commandText;
+    private String[] functionParameters;
     
     /**
      *
@@ -41,13 +40,16 @@ public class CommandWorker extends SwingWorker<String,Void>{
      * @param command
      * @param showOutput
      * @param function
+     * @param commandText
      */
     public CommandWorker(VBox parent,JLabel jlabel2,JLayeredPane jLayeredPane1,String[] command,Boolean showOutput,String function,String commandText){
         this.jLabel2 = jlabel2;
         this.jLayeredPane1 = jLayeredPane1;
         this.command = command;
         this.showOutput = showOutput;
-        this.function = function;
+        String[] functionArray = function.split(",");
+        this.function = (functionArray.length > 1)?functionArray[0]:function;
+        this.functionParameters = functionArray;
         this.parent = parent;
         this.showDirectlyAfter = true;
         this.commandText = commandText;
@@ -59,7 +61,7 @@ public class CommandWorker extends SwingWorker<String,Void>{
     }
     
     public CommandWorker(VBox parent,FileOutputStream writer){
-        this.parent = parent;
+    this.parent = parent;
     }
     
     public void setCommand(String[] command){
@@ -74,6 +76,8 @@ public class CommandWorker extends SwingWorker<String,Void>{
     /**
      *
      * @param parent
+     * @param list
+     * @param command
      */
     public CommandWorker(VBox parent,Boolean list,String[] command){
        this.parent = parent;
@@ -103,7 +107,7 @@ public class CommandWorker extends SwingWorker<String,Void>{
                         parent.downloadFile("http://dlc-cdn.sun.com/virtualbox/5.0.0_BETA3/VBoxGuestAdditions_5.0.0_BETA3.iso","VBoxGuestAdditions 5.0.0 BETA3.iso");
                     }
                 } catch(IOException ex){
-                    System.out.println("error with download ...");
+                    System.out.println(ex);
                 }
                 break;
             case "addServerInfoToServerList":
@@ -116,7 +120,7 @@ public class CommandWorker extends SwingWorker<String,Void>{
                 jLabel2.setText("Creating new hostonly adapter ...");
                 break;
             default:
-                if(commandText == ""){
+                if("".equals(commandText)){
                     jLabel2.setText(function);
                 } else {
                     jLabel2.setText(commandText);
@@ -128,31 +132,23 @@ public class CommandWorker extends SwingWorker<String,Void>{
     @Override
     public String doInBackground(){
         String l = null;
-        isoInstall = (parent.getISOFile()!=null)?true:false;
+        isoInstall = (parent.getISOFile()!=null);
         changeLoadingText(function);
         try{
             Process run = Runtime.getRuntime().exec(command);
             InputStreamReader v = new InputStreamReader(run.getInputStream());
             BufferedReader m = new BufferedReader(v);
-                        
+            
             ArrayList<String> commandOutput = new ArrayList<>();
             while((l = m.readLine()) != null){
                 commandOutput.add(l);
             }
             parent.setCommandOutput(commandOutput);
             
-            if(showOutput){
-                for(int i = 0; i < command.length; ++i){
-                    System.out.print(command[i]+" ");
-                }
-                System.out.println();
-                
+            if(showOutput){                
                 if("createvm".equals(command[1])){
                     String o = commandOutput.get(commandOutput.size()-1).replace("Settings file: '","").replace("\'","").trim();
                     parent.setVirtualboxdir(o.substring(0,o.lastIndexOf("\\")).trim());
-                }
-                for(int i = 0; i < commandOutput.size(); ++i){
-                    System.out.println(commandOutput.get(i));
                 }
             }
         } catch(IOException ex){
@@ -160,15 +156,27 @@ public class CommandWorker extends SwingWorker<String,Void>{
         }
         return l;
     }
-
+    
     @Override
     public void done() {
         try{
-            parent.getClass().getMethod(function).invoke(parent);
+            if(this.functionParameters.length == 1){
+                parent.getClass().getMethod(function).invoke(parent);
+                jLabel2.setText("Done ...");
+            } else {
+                Class[] listOfParameters = new Class[this.functionParameters.length];
+                Class[] testing = new Class[1];
+                testing[0] = String.class;
+                for(int i = 1; i < this.functionParameters.length; ++i){
+                    listOfParameters[i] = String.class;
+                }
+                parent.getClass().getMethod(function,listOfParameters).invoke(parent,listOfParameters);
+                jLabel2.setText("Done ...");
+            }
         } catch(NoSuchMethodException | SecurityException ex){
             changeLoadingText("Error With Function Call");
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-            Logger.getLogger(CommandWorker.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println(ex);
         }
     }
 }
