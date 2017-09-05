@@ -45,7 +45,6 @@ public class ServerList extends javax.swing.JFrame {
     
     public void setupServerModel(){
         DefaultMutableTreeNode servers = new DefaultMutableTreeNode("servers");
-        parent.setupVBoxDir();
         ArrayList<String> serversHolder = parent.getServers();
         for(int i = 0; i < serversHolder.size(); ++i){
             DefaultMutableTreeNode currServer = new DefaultMutableTreeNode(serversHolder.get(i));

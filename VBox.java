@@ -18,6 +18,7 @@ import java.awt.image.ImageProducer;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -56,18 +57,13 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
-
-/*import net.sf.sevenzipjbinding.ExtractOperationResult;
-import net.sf.sevenzipjbinding.IInArchive;
-import net.sf.sevenzipjbinding.SevenZip;
-import net.sf.sevenzipjbinding.SevenZipNativeInitializationException;
-import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream;
-import net.sf.sevenzipjbinding.simple.ISimpleInArchive;
-import net.sf.sevenzipjbinding.simple.ISimpleInArchiveItem;*/
 
 /**
  *
@@ -82,6 +78,7 @@ public class VBox extends javax.swing.JFrame {
     
     private String information;
     private Boolean[] reachable;
+    private Integer selectedTableRow;
     private String vboxdir;
     private ConfigSettings config;
     private CreateServerConnection createServer;
@@ -103,6 +100,7 @@ public class VBox extends javax.swing.JFrame {
     
     private String downloadDir;
     private String configDir;
+    private String settingsDir;
     private String isoFile;
     private String virtualboxdir;
     private String osInformation;
@@ -117,10 +115,11 @@ public class VBox extends javax.swing.JFrame {
     private int[] mouseOrigin;
     
     private Boolean downloading;
+    private Boolean configOK;
     private Boolean recreateDHCPServer;
     private JFrame updateDHCPFrameVisible;
     private JFrame readConfigVisible;
-            
+    
     private String[] newVMInformation;
     private ArrayList<String[]> commandList;
     private ArrayList<String> newServerList;
@@ -136,6 +135,7 @@ public class VBox extends javax.swing.JFrame {
     SwingWorker worker1;
     
     public VBox() {
+        selectedTableRow = 0;
         mainBackground = new java.awt.Color(25,25,25);
         darkBackground = new java.awt.Color(0,0,0);
         lightBackground = new java.awt.Color(51,51,51);
@@ -154,6 +154,25 @@ public class VBox extends javax.swing.JFrame {
         
         menu.setParentComponentCount();
         connectionTimedout = false;
+    }
+    
+    public void ConfigureSettings(){
+        String[] str = config.setParent(this);
+        configOK = setVBoxDir(str[0]);
+        settingsDir = str[1];
+        if(configOK){
+            run = new RunThread();
+            run.setParent(this);
+            Thread newThread = new Thread(run);
+            newThread.setDaemon(true);
+            newThread.start();
+            
+            setupIPTable();
+            this.setVisible(true);
+        } else {
+            this.setVisible(false);
+            config.setVisible(true);
+        }
     }
     
     public void ConfigureSettingsMenu(){
@@ -176,7 +195,20 @@ public class VBox extends javax.swing.JFrame {
         Image img = kit.createImage(getClass().getResource("/information/images/vmicon.png").getFile());
         this.setIconImage(img);
         
+        String userdir = System.getProperty("user.home");
+        downloadDir = userdir+"\\Downloads\\";
+        configDir = userdir+"\\VMManagerConfig\\";
         vboxdir = "C:\\Program Files\\Oracle\\VirtualBox\\";
+        
+        File configCheck = new File(configDir);
+        if(!configCheck.isDirectory()){
+            new File(configDir).mkdir();
+        }
+        
+        config = new ConfigSettings(mainBackground);
+        config.setVisible(false);
+        config.setParent(this);
+        reconfigurePlacement(config);
         
         fixedHost = new ArrayList<>();
         downloading = false;
@@ -257,11 +289,6 @@ public class VBox extends javax.swing.JFrame {
         ipAddresses = new ArrayList<>();
         commandText = new ArrayList<>();
         
-        config = new ConfigSettings();
-        config.setVisible(false);
-        config.setParent(this);
-        reconfigurePlacement(config);
-        
         createServer = new CreateServerConnection();
         createServer.setVisible(false);
         createServer.setParent(this);
@@ -272,24 +299,20 @@ public class VBox extends javax.swing.JFrame {
         serverCreation.setParent(this);
         reconfigurePlacement(serverCreation);
         
+        ipTable.getModel().addTableModelListener(new TableModelListener(){
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                System.out.println(e.getFirstRow()+" "+e.getColumn());
+            } 
+        });
+        
         serverList = new ArrayList<>();        
         vmArray = new ArrayList<>();
         ServersList = new ServersList(this);
-        setupServerHome();
-        
-        String userdir = System.getProperty("user.home");
-        
-        downloadDir = userdir+"\\Downloads\\";
-        configDir = userdir+"\\VMManagerConfig\\";
         
         this.setBackground(java.awt.Color.BLACK);
         
         readInstallFile();
-        
-        File configCheck = new File(configDir);
-        if(!configCheck.isDirectory()){
-            new File(configDir).mkdir();
-        }
         
         worker1 = new SwingWorker<String,Void>(){
             @Override
@@ -312,11 +335,8 @@ public class VBox extends javax.swing.JFrame {
             }
         });
         
-        run = new RunThread();
-        run.setParent(this);
-        Thread newThread = new Thread(run);
-        newThread.setDaemon(true);
-        newThread.start();
+        ConfigureSettings();
+        setupServerHome();
     }
     
     public JPanel getJPanel2(){
@@ -355,8 +375,41 @@ public class VBox extends javax.swing.JFrame {
         a.setLocationRelativeTo(null);
     }
     
-    public void setVBDir(String dirString){
-        setVBoxDir(dirString);
+    public String[] readConfigFileMain() throws FileNotFoundException, IOException{
+        File configFile = new File(configDir+"configuration.vmm");
+        if(!configFile.isFile()){
+            configFile.createNewFile();
+        }
+        BufferedReader b = new BufferedReader(new FileReader(configDir+"configuration.vmm"));
+        String m = " ";
+        String[] holder = new String[2];
+        int count = 0;
+        while((m = b.readLine()) != null){
+            holder[count] = m;
+            ++count;
+        }
+        b.close();
+        return holder;
+    }
+    
+    public void writeConfigFileMain(String[] str) throws IOException{
+        BufferedWriter b = new BufferedWriter(new FileWriter(configDir+"configuration.vmm",false));
+        for(int i = 0; i < str.length; ++i){
+            b.write(str[i]+"\r\n");
+        }
+        b.close();
+    }
+    
+    public void setVBDir(String dirString,boolean configuration){
+        try{
+            File file = new File(configDir+"configuration.vmm");
+            if(!file.isFile()){
+                file.createNewFile();
+            }
+        }catch(IOException ex){
+            System.out.println(ex);
+        }
+        this.ConfigureSettings();
     }
     
     public Map<String,String> compileServers(){
@@ -406,14 +459,12 @@ public class VBox extends javax.swing.JFrame {
     }
     
     public void setupServerHome(){
-        setupVBoxDir();
         serverList = new ArrayList<>();
         serverList.add("Home");
         runCommand(new String[]{vboxdir,"list","vms"},true,"addServerInfoToServerList",true,"Listing VMs");
     }
     
     public void setupServerHome(Boolean displayFrame){
-        setupVBoxDir();
         serverList = new ArrayList<>();
         serverList.add("Home");
         if(displayFrame){
@@ -425,7 +476,11 @@ public class VBox extends javax.swing.JFrame {
     
     public void writeInstallFile(){
         try{
-            BufferedWriter out = new BufferedWriter(new FileWriter(configDir+"resume.vmm",false));
+            File file = new File(configDir+"resume.vmm");
+            if(!file.isFile()){
+                file.createNewFile();
+            }
+            BufferedWriter out = new BufferedWriter(new FileWriter(configDir+"resume.vmm",true));
             out.write("Current Configurations:\r\n");
             for(int i = 0; i < newServerList.size(); ++i){
                 out.write(newServerList.get(i)+"\r\n");
@@ -444,6 +499,10 @@ public class VBox extends javax.swing.JFrame {
         newServerList = new ArrayList<>();
         currentDownloads = new ArrayList<>();
         try{
+            File file = new File(configDir+"resume.vmm");
+            if(!file.isFile()){
+                file.createNewFile();
+            }
             BufferedReader read = new BufferedReader(new FileReader(configDir+"resume.vmm"));
             String m;
             String currentSection = "";
@@ -525,8 +584,20 @@ public class VBox extends javax.swing.JFrame {
         return vmArray.get(i);
     }
 
-    public void setVBoxDir(String vbox){
-        vboxdir = vbox;
+    public Boolean setVBoxDir(String vbox){
+        if(vbox != null){
+            vbox = vbox.replace("VBoxManage.exe","");
+            vbox = vbox+"\\VBoxManage.exe";
+            File file = new File(vbox);
+            if(!file.isFile()){
+                return false;
+            }else{
+                vboxdir = vbox;
+                return true;
+            }
+        } else {
+            return false;
+        }
     }
     
     public void setISO(String isoFile){
@@ -675,13 +746,11 @@ public class VBox extends javax.swing.JFrame {
         }
     }
     
-    public void setupVBoxDir(){
-        vboxdir = vboxdir.replace("VBoxManage.exe","");
-        vboxdir = vboxdir+"VBoxManage.exe";
+    public String getConfigDir(){
+        return configDir;
     }
     
     private void setupIPRows() throws UnknownHostException, IOException{
-        setupVBoxDir();
         ArrayList commandList = new ArrayList<String>();
         runCommand(new String[]{vboxdir,"list","hostonlyifs"},false,"updateIPInformation",false,"Listing Host Only Adapters");
     }
@@ -711,8 +780,13 @@ public class VBox extends javax.swing.JFrame {
     
     public void setupIPTable(){
         try{
-            jLayeredPane5.setVisible(true);
-            setupIPRows();
+            if(!configOK){
+                config.setVisible(true);
+                config.toFront();
+            }else{
+                jLayeredPane5.setVisible(true);
+                setupIPRows();
+            }
         } catch(IOException ex){
             System.out.println("IP table Iusse");
         }
@@ -720,15 +794,11 @@ public class VBox extends javax.swing.JFrame {
     
     private void readVMsForServer(String server){
         if(server.contains("main")){
-            setupVBoxDir();
             runCommand(new String[]{vboxdir,"list","vms"},true,"setupVMList",true,"List VM's");
-        } else {
-            setupVBoxDir();
         }
     }
     
     public String getVBDir(){
-        setupVBoxDir();
         return vboxdir;
     }
     
@@ -757,14 +827,11 @@ public class VBox extends javax.swing.JFrame {
     }
     
     public void processVboxmanage(String process,String attribute){
-        vboxdir = vboxdir.replace("VBoxManage.exe","");
-        vboxdir = vboxdir+"VBoxManage.exe";
-        
         String[] vboxHolder;
         
         switch(process){
             case "remove":
-                vboxHolder = new String[]{vboxdir,"VBoxManager.exe","hostonlyif","remove","\""+attribute+"\""};
+                vboxHolder = new String[]{vboxdir,"hostonlyif","remove","\""+attribute+"\""};
                 break;
             default:
                 vboxHolder = new String[]{vboxdir,"hostonlyif","create"};
@@ -963,7 +1030,7 @@ public class VBox extends javax.swing.JFrame {
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGap(0, 582, Short.MAX_VALUE)
         );
 
         jPanel1.setMaximumSize(new java.awt.Dimension(801, 582));
@@ -1231,7 +1298,7 @@ public class VBox extends javax.swing.JFrame {
             .addGroup(jLayeredPane3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jLayeredPane3Layout.createSequentialGroup()
                     .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGap(0, 0, 0)))
+                    .addGap(0, 0, Short.MAX_VALUE)))
             .addGroup(jLayeredPane3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jLayeredPane3Layout.createSequentialGroup()
                     .addGap(0, 0, Short.MAX_VALUE)
@@ -1244,9 +1311,9 @@ public class VBox extends javax.swing.JFrame {
                 .addComponent(jLayeredPane5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(0, 0, Short.MAX_VALUE))
             .addGroup(jLayeredPane3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jLayeredPane3Layout.createSequentialGroup()
+                .addGroup(jLayeredPane3Layout.createSequentialGroup()
                     .addGap(0, 0, 0)
-                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, 570, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGap(0, 0, 0)))
             .addGroup(jLayeredPane3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(jLayeredPane3Layout.createSequentialGroup()
@@ -1312,7 +1379,7 @@ public class VBox extends javax.swing.JFrame {
             node.add(new String[]{ipAddresses.get(i)[1],ipAddresses.get(i)[0]});
         }
         
-        updateDHCP();
+        //updateDHCP();
         
         int total_host_only = 0;
         String servers = new String();
@@ -1388,7 +1455,14 @@ public class VBox extends javax.swing.JFrame {
                         Boolean adapterAdded = false;
                         for(int i = 0; i < adapters.size(); ++i){
                             if(adapterName.contains(adapters.get(i).toString())){
-                                Process dhcpProcess = Runtime.getRuntime().exec(new String[]{vboxdir,"dhcpserver","modify","--netmask","255.255.255.0","--netname","\""+adapterName+"\"","--ip",ipAddress,"--upperip",ipAddress.substring(0,ipAddress.lastIndexOf('.')+1)+"254","--lowerip",ipAddress.substring(0,ipAddress.lastIndexOf('.')+1)+"101","--enable"});
+                                String[] s = new String[]{vboxdir,"dhcpserver","modify","--netmask","255.255.255.0","--netname","\""+adapterName+"\"","--ip",ipAddress,"--upperip",ipAddress.substring(0,ipAddress.lastIndexOf('.')+1)+"254","--lowerip",ipAddress.substring(0,ipAddress.lastIndexOf('.')+1)+"101","--enable"};
+                                Process dhcpProcess = Runtime.getRuntime().exec(s);
+                                
+                                for(String v : s){
+                                    System.out.print(v+" ");
+                                }
+                                System.out.println();
+                                
                                 adapterAdded = true;
                                 break;
                             }
@@ -1398,10 +1472,6 @@ public class VBox extends javax.swing.JFrame {
                             Process dhcpserver = Runtime.getRuntime().exec(new String[]{vboxdir,"dhcpserver","add","--netmask","255.255.255.0","--netname",adapterName,"--ip",ipAddress,"--lowerip",ipAddress.substring(0,ipAddress.lastIndexOf('.')+1)+"101","--upperip",ipAddress.substring(0,ipAddress.lastIndexOf('.')+1)+"255"});
                             BufferedReader bh = new BufferedReader(new InputStreamReader(dhcpserver.getInputStream()));
                             String str = "";
-                            
-                            while((str = bh.readLine()) != null){
-                                System.out.println(str);
-                            }
                         }
                     }catch(IOException ex){
                         System.out.println(ex);
@@ -1483,11 +1553,10 @@ public class VBox extends javax.swing.JFrame {
     }//GEN-LAST:event_jButton3ActionPerformed
 
     private void removeAdapter(String hostName,String dhcp){
-        fixedHost.add(hostName);
-        runCommand(new String[]{vboxdir,"hostonlyif","remove","\""+hostName.replace("HostInterfaceNetworking-","")+"\""},true,"removeDHCPServer",true,"Removing Host-Only Adapter");
+        runCommand(new String[]{vboxdir,"hostonlyif","remove","\""+hostName.replace("HostInterfaceNetworking-","")+"\""},true,"removeDHCPServer,"+hostName,true,"Removing Host-Only Adapter");
     }
     
-    public void removeDHCPServer(){
+    public void removeDHCPServer(String t){
         String continuedFunction;
         
         if(recreateDHCPServer){
@@ -1495,10 +1564,13 @@ public class VBox extends javax.swing.JFrame {
         } else {
             continuedFunction = "testing";
         }
-        runCommand(new String[]{vboxdir,"dhcpserver","remove","--netname","\""+fixedHost.get(0)+"\""},true,continuedFunction,true,"Delete registered DCHP Server");
+        
+        runCommand(new String[]{vboxdir,"dhcpserver","remove","--netname","\""+t+"\""},true,continuedFunction,true,"Delete registered DCHP Server");
     }
         
     private void ipTableMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_ipTableMousePressed
+        selectedTableRow = ipTable.getSelectedRow();
+        ipTable.getSelectionModel().clearSelection();
         showDHCPFrame();
     }//GEN-LAST:event_ipTableMousePressed
     
@@ -1541,32 +1613,6 @@ public class VBox extends javax.swing.JFrame {
         ServerTab.setBackground(TabSelectColors.get(deselect));
     }
     
-    /*private JComboBox getServerList(){
-        Process process = Runtime.getRuntime().exec(new String[]{vboxdir,"list","vms"});
-            BufferedReader serverReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-
-            String string = "";
-            ArrayList<String> serverList = new ArrayList<>();
-            Map v = compileServers();
-            int count = 0;
-            while((string = serverReader.readLine()) != null){
-                Pattern pattern = Pattern.compile("\"(.*)\" \\{(.*)\\}");
-                Matcher m = pattern.matcher(string);
-                if(m.find()){
-                    serverSelect.addItem(m.group(1));
-                    String check = "";
-                    if(v.get(ipAddresses.get(ipTable.getSelectedRow())[0].replace("HostInterfaceNetworking-","")) != null){
-                        check = v.get(ipAddresses.get(ipTable.getSelectedRow())[0].replace("HostInterfaceNetworking-","")).toString();
-                    }
-                    Boolean b = check.contains(m.group(1));
-                    if(b){
-                        serverSelect.setSelectedItem(count);
-                    }
-                    ++count;
-                }
-            }
-    }*/
-    
     private JComboBox getServerList(){
         JComboBox serverSelect = new JComboBox();
         try{
@@ -1581,15 +1627,20 @@ public class VBox extends javax.swing.JFrame {
     
     private void showDHCPFrame(){
         updateDHCPFrameVisible.dispose();
-        updateDHCPFrameVisible = new JFrame("Select Server "+ipAddresses.get(ipTable.getSelectedRow())[0].replace("HostInterfaceNetworking-Virtual",""));
+        updateDHCPFrameVisible = new JFrame("Select Server "+ipAddresses.get(selectedTableRow)[0].replace("HostInterfaceNetworking-Virtual",""));
         
         JPanel jpanel = new JPanel();
         
         JLayeredPane layeredPane = new JLayeredPane();
         JComboBox serverSelect = getServerList();
+        JTextField ipAddress = new JTextField();
         Dimension itemD = new Dimension(525,25);
+        ipAddress.setBorder(javax.swing.BorderFactory.createLineBorder(new Color(254,254,254)));
+        serverSelect.setBorder(javax.swing.BorderFactory.createLineBorder(new Color(254,254,254)));
         serverSelect.setPreferredSize(itemD);
+        ipAddress.setPreferredSize(itemD);
         
+        jpanel.add(ipAddress);
         jpanel.add(serverSelect);
 
         JButton submitButton = new JButton("Set Server DHCP");
@@ -1608,7 +1659,9 @@ public class VBox extends javax.swing.JFrame {
         closeText.setText("close");
         closeText.setIcon(new ImageIcon(getClass().getResource("/information/images/close_button.png").getFile()));
                 
-        textInfo.setText("Updating "+ipAddresses.get(ipTable.getSelectedRow())[0].replace("HostInterfaceNetworking-",""));
+        ipAddress.setText(ipAddresses.get(selectedTableRow)[1]);
+        
+        textInfo.setText("Updating "+ipAddresses.get(selectedTableRow)[0].replace("HostInterfaceNetworking-",""));
         textInfo.setForeground(new java.awt.Color(244,244,244));
         textInfo.setBounds(10,-10,300,50);
         
@@ -1616,7 +1669,7 @@ public class VBox extends javax.swing.JFrame {
         closeContainer.add(textInfo);
         
         removeButton.addActionListener((ActionEvent e) -> {
-            removeAdapter(ipAddresses.get(ipTable.getSelectedRow())[0],ipAddresses.get(ipTable.getSelectedRow())[1]);
+            removeAdapter(ipAddresses.get(selectedTableRow)[0],ipAddresses.get(selectedTableRow)[1]);
         });
         
         updateDHCPFrameVisible.addMouseListener(new MouseAdapter(){
@@ -1653,8 +1706,8 @@ public class VBox extends javax.swing.JFrame {
         closeText.setForeground(new java.awt.Color(240,240,240));
         closeText.setBounds(440,0,100,30);
         closeContainer.setBounds(0,0,550,30);
-        jpanel.setBounds(0,30,550,30);
-        buttons.setBounds(0,60,550,50);
+        jpanel.setBounds(0,30,550,70);
+        buttons.setBounds(0,100,550,50);
         
         jpanel.setBackground(backgroundColor);
         buttons.setBackground(backgroundColor);
@@ -1667,7 +1720,7 @@ public class VBox extends javax.swing.JFrame {
         layeredPane.add(closeContainer);
         layeredPane.add(jpanel);
         layeredPane.add(buttons);
-        layeredPane.setBounds(30,0,550,170);
+        layeredPane.setBounds(30,0,550,200);
         
         updateDHCPFrameVisible.setUndecorated(true);
         updateDHCPFrameVisible.add(layeredPane);
@@ -1685,9 +1738,11 @@ public class VBox extends javax.swing.JFrame {
         });
         
         submitButton.addActionListener((ActionEvent e) -> {
+            String ip = ipAddress.getText();
+            String[] updateIPAddress = new String[]{vboxdir,"dhcpserver","modify","--netmask","255.255.255.0","--netname","\""+ipAddresses.get(selectedTableRow)[0].replace("HostInterfaceNetworking-","")+"\"","--ip",ip,"--upperip",ip.substring(ip.lastIndexOf('.')+1)+"101","--lowerip",ip.substring(ip.lastIndexOf('.')+1)+"101","--enable"};
             String[] pauseServer = new String[]{vboxdir,"controlvm","\""+serverSelect.getSelectedItem()+"\"","pause"};
             //String[] saveServer = new String[]{vboxdir,"controlvm","\""+serverSelect.getSelectedItem()+"\"","savestate"};
-            String[] setupServerAdapter = new String[]{vboxdir,"modifyvm","\""+serverSelect.getSelectedItem()+"\"","--nic2","hostonly","--hostonlyadapter2","\""+ipAddresses.get(ipTable.getSelectedRow())[0].replace("HostInterfaceNetworking-","")+"\""};
+            String[] setupServerAdapter = new String[]{vboxdir,"modifyvm","\""+serverSelect.getSelectedItem()+"\"","--nic2","hostonly","--hostonlyadapter2","\""+ipAddresses.get(selectedTableRow)[0].replace("HostInterfaceNetworking-","")+"\""};
             String[] startServer = new String[]{vboxdir,"startvm","\""+serverSelect.getSelectedItem()+"\""};
             try{
                 //Runtime.getRuntime().exec(saveServer);
@@ -1695,25 +1750,10 @@ public class VBox extends javax.swing.JFrame {
                 BufferedReader bf = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 
                 String sl = "";
-                while((sl = bf.readLine()) != null){
-                    System.out.println(sl);
-                }
+                
                 process = Runtime.getRuntime().exec(setupServerAdapter);
-                for(int i = 0; i < setupServerAdapter.length; ++i){
-                    System.out.print(setupServerAdapter[i]+" ");
-                }
-                System.out.println();
-                while((sl = bf.readLine()) != null){
-                    System.out.println(sl);
-                }
                 process = Runtime.getRuntime().exec(startServer);
-                for(int i = 0; i < startServer.length; ++i){
-                    System.out.print(startServer[i]+" ");
-                }
-                System.out.println();
-                while((sl = bf.readLine()) != null){
-                    System.out.println(sl);
-                }
+                updateIPAddress(ip,selectedTableRow);
                 String string = "";
             }catch(IOException ex){
                 System.out.println(ex);
@@ -1723,18 +1763,37 @@ public class VBox extends javax.swing.JFrame {
         });
 
         setupDHCPButton.addActionListener((ActionEvent e) -> {
-            try {
-                updateDHCPServer(ipAddresses.get(ipTable.getSelectedRow())[0],ipAddresses.get(ipTable.getSelectedRow())[1]);
-                setupIPTable();
-                updateDHCPFrameVisible.dispose();
-            } catch (IOException ex) {
-                Logger.getLogger(VBox.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            String ip = ipAddress.getText();
+            ipAddresses.get(selectedTableRow)[1] = ip;
+            updateIPAddress(ip,selectedTableRow);
+            setupIPTable();
+            updateDHCPFrameVisible.dispose();
         });
         
-        updateDHCPFrameVisible.setBounds(0,0,550,100);
+        updateDHCPFrameVisible.setBounds(0,0,550,150);
         updateDHCPFrameVisible.setLocationRelativeTo(null);
         updateDHCPFrameVisible.setVisible(true);
+    }
+    
+    public void updateIPAddress(String ip,int ipIndex){
+        String[] s = new String[]{vboxdir,"dhcpserver","modify","--netmask","255.255.255.0","--netname","\""+ipAddresses.get(ipIndex)[0]+"\"","--ip",ip,"--upperip",ip.substring(0,ip.lastIndexOf('.')+1)+"254","--lowerip",ip.substring(0,ip.lastIndexOf('.')+1)+"101","--enable"};
+        String[] m = new String[]{vboxdir,"hostonlyif","ipconfig","\""+ipAddresses.get(ipIndex)[0].replace("HostInterfaceNetworking-","")+"\"","--ip",ip};
+        for(String g : m){
+            System.out.print(g+" ");
+        }
+        System.out.println();
+        try{
+            Process process = Runtime.getRuntime().exec(m);
+            process = Runtime.getRuntime().exec(s);
+            BufferedReader bh = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String v = " ";
+            while((v = bh.readLine()) != null){
+                System.out.println(v);
+            }
+            System.out.println(ip);
+        }catch(Exception ex){
+            System.out.println(ex);
+        }
     }
     
     /* used to grab virtual box directory */
@@ -1860,10 +1919,7 @@ public class VBox extends javax.swing.JFrame {
     }
     
     private void createLinuxUpdate(String type){
-        serverCreation.setServerType(type);
-        vboxdir = vboxdir.replace("VBoxManage.exe","");
-        vboxdir = vboxdir+"VBoxManage.exe";
-        
+        serverCreation.setServerType(type);        
         String[] vboxHolder;
         
         vboxHolder = new String[]{vboxdir,"createvm","--name","testing","--ostype","Linux","--register"};
@@ -1883,6 +1939,15 @@ public class VBox extends javax.swing.JFrame {
         VMStarted vmstarted = new VMStarted(this,mostRecentVM);
         vmstarted.setVisible(true);
         vmstarted.setLocationRelativeTo(null);
+    }
+    
+    public int setupConfigField(String text,int i){
+        config.setupField(text,i);
+        return i;
+    }
+    
+    public void setupConfigError(int i){
+        config.showErrors(i);
     }
     
     /**
@@ -1910,7 +1975,8 @@ public class VBox extends javax.swing.JFrame {
         
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(() -> {
-            new VBox().setVisible(true);
+            VBox vbox = new VBox();
+            vbox.setVisible(true);
         });
     }
 

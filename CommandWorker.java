@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import javax.swing.SwingWorker;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
@@ -136,12 +137,19 @@ public class CommandWorker extends SwingWorker<String,Void>{
         changeLoadingText(function);
         try{
             Process run = Runtime.getRuntime().exec(command);
+            
+            for(int i = 0; i < command.length; ++i){
+                System.out.print(command[i]+" ");
+            }
+            System.out.println();
+            
             InputStreamReader v = new InputStreamReader(run.getInputStream());
             BufferedReader m = new BufferedReader(v);
             
             ArrayList<String> commandOutput = new ArrayList<>();
             while((l = m.readLine()) != null){
                 commandOutput.add(l);
+                System.out.println(l);
             }
             parent.setCommandOutput(commandOutput);
             
@@ -164,13 +172,10 @@ public class CommandWorker extends SwingWorker<String,Void>{
                 parent.getClass().getMethod(function).invoke(parent);
                 jLabel2.setText("Done ...");
             } else {
-                Class[] listOfParameters = new Class[this.functionParameters.length];
-                Class[] testing = new Class[1];
-                testing[0] = String.class;
-                for(int i = 1; i < this.functionParameters.length; ++i){
-                    listOfParameters[i] = String.class;
-                }
-                parent.getClass().getMethod(function,listOfParameters).invoke(parent,listOfParameters);
+                Class[] argTypes = new Class[] { String[].class };
+                System.out.println(function);
+                System.out.println(functionParameters);
+                parent.getClass().getDeclaredMethod(function, argTypes).invoke(parent,(Object)functionParameters);
                 jLabel2.setText("Done ...");
             }
         } catch(NoSuchMethodException | SecurityException ex){

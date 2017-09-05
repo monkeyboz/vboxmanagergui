@@ -44,7 +44,6 @@ public class ServersList extends javax.swing.JLayeredPane {
     
     public void setupServerModel(){
         DefaultMutableTreeNode servers = new DefaultMutableTreeNode("servers");
-        this.parent.setupVBoxDir();
         ArrayList<String> serversHolder = this.parent.getServers();
         for(int i = 0; i < serversHolder.size(); ++i){
             DefaultMutableTreeNode currServer = new DefaultMutableTreeNode(serversHolder.get(i));
@@ -110,7 +109,7 @@ public class ServersList extends javax.swing.JLayeredPane {
                 .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jLayeredPane1Layout.createSequentialGroup()
                         .addComponent(jLabel1))
-                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, parent.getWidth()-50, Short.MAX_VALUE))
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE,parent.getHeight()-100, Short.MAX_VALUE))
                 .addContainerGap())
         );
         jLayeredPane1Layout.setVerticalGroup(
@@ -120,7 +119,7 @@ public class ServersList extends javax.swing.JLayeredPane {
                 .addGroup(jLayeredPane1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, parent.getHeight()-120, Short.MAX_VALUE)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE,parent.getHeight()-100, Short.MAX_VALUE)
                 .addContainerGap())
         );
         setLayout();
