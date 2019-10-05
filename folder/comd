@@ -1,9 +1,0 @@
-modifyvm "[vmname]" --nic1 nat
-modifyvm "[vmname]" --nic2 hostonly --hostonlyadapter2 [hostonlyname]
-modifyvm "[vmname]" --memory [vmramsetting]
-createhd --filename "[vmnamefile].vdi" --size [vmhdsize]
-storagectl "[vmname]" --name "SATA Controller" --add sata --controller IntelAHCI
-storageattach "[vmname]" --storagectl "SATA Controller" --port 0 --device 0 --type hdd --medium "[vmnamefile].vdi"
-storagectl "[vmname]" --name "IDE Controller" --add ide
-storageattach "[vmname]" --storagectl "IDE Controller" --port 0 --device 0 --type dvddrive --medium "[vmtype_path_to_iso]"
-startvm "[vmname]"

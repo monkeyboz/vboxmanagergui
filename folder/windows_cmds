@@ -1,6 +1,0 @@
-ping:ping -n 1 [ipaddress]
-pingOutput:.*Packets: Sent = (\d+), Received = (\d+), Lost = (\d+) \((\d+)% loss\),.*
-pingFalsePos1:.*Destination net unreachable.
-pingFalsePos2:.*Destination host unreachable.
-pingFalsePos3:.*Request timed out.
-filesearch:dir /s [file]
